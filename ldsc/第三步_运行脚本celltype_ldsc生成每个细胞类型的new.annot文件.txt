@@ -1,0 +1,40 @@
+#!/usr/bin/sh
+
+path_name="/data/h01005/hc/ldsc/ldsc"
+all_snps="1000genomes_phase3_SNPs.bed2"
+all_annotations="1000G_EUR_Phase3_baseline_annot"
+plink_file="1000G_EUR_Phase3_plink"
+hapmap_snps="hm3_no_MHC.list.txt"
+new_annotations_dir="$path_name/${all_annotations}_2"
+mkdir -p "$new_annotations_dir" baseline
+
+
+for f in /data/h01005/hc/ldsc/Bed/*_.bed
+do
+  tissue=$(basename "$f" _.bed | sed 's/[^a-zA-Z0-9_]/_/g')
+  
+  intersectBed -c -a $path_name/$all_snps -b $f > "${f}.1000genomes.intersect"
+  awk '{if($5!=0) print $4}' "${f}.1000genomes.intersect" > "${f}.1000genomes.intersect.snp"
+  
+  mkdir -p "${tissue}_tissue_dir"
+  #rm "${f}.1000genomes.intersect" "${f}.1000genomes.intersect.snp"
+  cd "${tissue}_tissue_dir"
+  
+  for j in "$path_name/$all_annotations"/*.annot
+  do
+    file_name=$(basename "$j")
+    output_prefix="${file_name%.annot}"
+    output_file="${new_annotations_dir}/${output_prefix}_${tissue}.new.annot"
+    
+    perl "$path_name/fast_match2_2.pl" \
+      "${f}.1000genomes.intersect.snp" \
+      "${tissue}" \
+      "${j}" \
+      > "$output_file"
+  done
+  
+  gzip "$new_annotations_dir"/*.new.annot
+  
+  cd ..
+done
+

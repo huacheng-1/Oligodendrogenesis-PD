@@ -1,0 +1,105 @@
+library(tidyverse)
+library(snow)
+library(Seurat)
+library(org.Hs.eg.db)
+library(dplyr)
+
+
+# 正确重命名列（在管道内完成）
+gene_coordinates <- read_tsv("/data/h01005/hc/magama/NCBI37.3.gene.loc",
+                             col_names = FALSE, col_types = 'cciicc') %>%
+  mutate(start = ifelse(X3-100000 < 0, 0, X3-100000),
+         end = X4+100000, chr = X2, ENTREZ = X1) %>%
+  dplyr::select(`chr`, `start`, `end`, `ENTREZ`)%>%  # 调整列顺序
+  mutate(chr = paste0("chr", `chr`)) %>%
+  # 将ENTREZ ID设为行名（关键步骤！）
+  column_to_rownames("ENTREZ") %>%
+  # 现在可以直接选择列（行名已对齐）
+  dplyr::select(`chr`, `start`, `end`)
+
+
+
+entrez_to_symbol <- mapIds(org.Hs.eg.db,
+                           keys = rownames(gene_coordinates),
+                           column = "SYMBOL",
+                           keytype = "ENTREZID",
+                           multiVals = "first")
+
+
+gene_coordinates$symbol <- entrez_to_symbol
+gene_coordinates$ENTREZ <- rownames(gene_coordinates)
+
+
+
+##计算Lvl4平均表达量
+avg_exp <- AverageExpression(scRNA_combined, 
+                             assays = "RNA",
+                             group.by = "cells",
+                             return.seurat = TRUE)
+
+# 提取标准化表达矩阵
+exp_matrix <- Seurat::GetAssayData(
+  avg_exp,
+  assay = "RNA",
+  layer = "counts"
+)
+
+# 转换为长格式
+exp_lvl5 <- exp_matrix %>%
+  as.data.frame() %>%
+  rownames_to_column("Gene") %>%
+  pivot_longer(
+    cols = -Gene,
+    names_to = "Lvl4",
+    values_to = "Expr_sum_mean"
+  )
+##过滤未表达基因
+not_expressed <- exp_lvl5 %>%
+  group_by(Gene) %>%
+  summarise(total_sum = sum(Expr_sum_mean)) %>%
+  filter(total_sum == 0) %>%
+  pull(Gene)
+
+exp_lvl5 <- exp_lvl5 %>%
+  filter(!Gene %in% not_expressed)
+
+##按细胞类型标准化
+exp_lvl5 <- exp_lvl5 %>%
+  group_by(Lvl4) %>%
+  mutate(Expr_sum_mean = Expr_sum_mean * 1e6 / sum(Expr_sum_mean))
+
+##计算基因特异性
+exp_lvl5 <- exp_lvl5 %>%
+  group_by(Gene) %>%
+  mutate(specificity = Expr_sum_mean / sum(Expr_sum_mean)) %>%
+  ungroup()
+
+##生成MAGMA/LDSC输入文件
+# 计算要保留的基因数量，这一步通过修改0.1至0.2-0.5可获取前20%-50%的基因
+n_genes <- length(unique(exp_lvl5$Gene))
+n_genes_to_keep <- round(n_genes * 0.1)
+
+# 生成MAGMA输入
+magma_input <- exp_lvl5 %>%
+  filter(Expr_sum_mean > 1) %>%
+  group_by(Lvl4) %>%
+  slice_max(order_by = specificity, n = n_genes_to_keep) %>%
+  ungroup() %>%
+  dplyr::select(Lvl4, Gene)  # 关键修正：使用dplyr::前缀
+
+# 生成LDSC输入
+ldsc_input <- magma_input %>%
+  inner_join(
+    gene_coordinates %>% 
+      dplyr::select(chr, start, end, symbol),
+    by = c("Gene" = "symbol")  # 关键修正：指定连接键映射
+  )
+dir.create("/data/h01005/hc/ldsc/Bed", recursive = TRUE, showWarnings = FALSE)
+ldsc_input %>%
+  split(.$Lvl4) %>%
+  walk(~ write_tsv(.x %>% dplyr::select(chr, start, end, Gene),
+                   paste0("/data/h01005/hc/ldsc/Bed/", make.names(unique(.x$Lvl4)), ".bed"),
+                   col_names = FALSE))
+
+
+

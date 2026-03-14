@@ -1,0 +1,7 @@
+cd /data/h01005/hc/ldsc/ldsc/1000G_EUR_Phase3_baseline_annot
+for file in baselineLD*
+do
+awk 'NR > 1{print "chr"$1"\t"$2"\t"$2"\t"$3}' $file >> tmp.bed
+done
+sortBed -i tmp.bed > 1000genomes_phase3_SNPs.bed2
+rm tmp.bed

@@ -1,0 +1,25 @@
+# 先获取总CPU核心数
+TOTAL_CORES=$(nproc)
+# 计算允许使用的核心数（40%取整）
+ALLOWED_CORES=$(( (TOTAL_CORES * 22 + 99) / 100 ))
+
+for i in {1..22}
+do
+  # 提前创建输出目录
+  mkdir -p [p#1 参数名]
+  # 获取可用CPU核心列表
+   AVAILABLE_CORES=$(seq 0 $((ALLOWED_CORES-1)) | paste -sd,)
+   taskset -c $AVAILABLE_CORES \
+   sbatch -t 20:00:00 -n 1 -o log_[p#1 参数名]_$i --wrap="\
+    /data/h01005/hc/ldsc/ldsc/ldsc.py --l2 \
+    --bfile /data/h01005/hc/ldsc/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.$i \
+    --ld-wind-cm 1 \
+    --print-snps /data/h01005/hc/ldsc/ldsc/hm3_no_MHC.list.txt \
+    --annot /data/h01005/hc/ldsc/ldsc/1000G_EUR_Phase3_baseline_annot_2/baselineLD.${i}_[p#1 参数名].new.annot.gz \
+    --out [p#1 参数名]/baselineLD.[p#1 参数名].$i"
+done
+
+cd /data/h01005/hc/ldsc/ldsc/1000G_EUR_Phase3_baseline_annot_2/
+for i in {1..22}; do
+  mv "baselineLD.${i}_[p#1 参数名].new.annot.gz" "[p#1 参数名]/${TISSUE_NAME}/baselineLD.[p#1 参数名].${i}.annot.gz"
+done

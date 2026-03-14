@@ -1,0 +1,10 @@
+# 手动运行单个组织（调试用）
+cd /data/h01005/hc/ldsc/ldsc/
+./ldsc.py --h2 /data/h01005/hc/ldsc/sumstats_107/PASS.Parkinson.Nalls2019.sumstats.gz \
+--ref-ld-chr /data/h01005/hc/ldsc/ldsc/[p#1 参数名]/baselineLD.[p#1 参数名].,/data/h01005/hc/ldsc/ldsc/1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD. \
+--w-ld-chr /data/h01005/hc/ldsc/ldsc/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC. \
+--frqfile-chr /data/h01005/hc/ldsc/ldsc/1000G_Phase3_frq/1000G.EUR.QC. \
+--annot /data/h01005/hc/ldsc/ldsc/1000G_EUR_Phase3_baseline_annot_2/baselineLD.*_[p#1 参数名].new.annot.gz,/data/h01005/hc/ldsc/ldsc/1000G_EUR_Phase3_baseline_annot/baselineLD.*.annot \
+--print-coefficients \
+--overlap-annot \
+--out [p#1 参数名]_out_2 
