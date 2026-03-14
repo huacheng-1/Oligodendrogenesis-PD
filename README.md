@@ -5,7 +5,6 @@ Aberrant oligodendrogenesis in the substantia nigra promotes oxidative stress-de
 - [Overview](#overview)
 - [Repo Contents](#repo-contents)
 - [System Requirements](#system-requirements)
-- [Citation](#citation)
 
 # Overview
 
@@ -58,8 +57,3 @@ sudo apt-get install r-base r-base-dev
 ```
 
 which should install in about 20 seconds.
-
-
-# Citation
-
-For usage of the package and associated manuscript, please cite according to the enclosed [citation.bib](./citation.bib)
