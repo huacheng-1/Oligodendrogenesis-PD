@@ -1,16 +1,5 @@
 # oligodendrogenesis-Parkinson-s-disease
 Aberrant oligodendrogenesis in the substantia nigra promotes oxidative stress-dependent PANX1 activation and neurodegeneration in Parkinson’s disease
-# Linear Optimal Low Rank Projection (lolR)
-
-
-[![CRAN Status Badge](http://www.r-pkg.org/badges/version/lolR)](http://cran.r-project.org/web/packages/lolR)
-[![arXiv shield](https://img.shields.io/badge/arXiv-1709.01233-red.svg?style=flat)](https://arxiv.org/abs/1709.01233)
-[![Travis-CI Build Status](https://travis-ci.org/neurodata/lol.svg?branch=master)](https://travis-ci.org/neurodata/lol)
-[![Codecov status](https://codecov.io/gh/neurodata/lol/branch/master/graph/badge.svg)](https://codecov.io/gh/neurodata/lol)
-[![Downloads badge](https://cranlogs.r-pkg.org/badges/lolR)](https://cranlogs.r-pkg.org/badges/lolR)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1246979.svg)](https://doi.org/10.5281/zenodo.1246979)
-
-
 ## Contents
 
 - [Overview](#overview)
