@@ -6,7 +6,6 @@ Aberrant oligodendrogenesis in the substantia nigra promotes oxidative stress-de
 - [Repo Contents](#repo-contents)
 - [System Requirements](#system-requirements)
 - [Installation Guide](#installation-guide)
-- [Demo](#demo)
 - [Results](#results)
 - [License](./LICENSE)
 - [Issues](https://github.com/ebridge2/lol/issues)
@@ -111,37 +110,6 @@ vignette("lol", package="lolR")  # view one of the basic vignettes
 ```
 
 The package should take approximately 40 seconds to install with vignettes on a recommended computer. 
-
-# Demo
-
-## Functions
-
-For interactive demos of the functions, please check out the vignettes built into the package. They can be accessed as follows:
-
-```
-require(lolR)
-vignette('lol')
-vignette('pca')
-vignette('cpca')
-vignette('lrcca')
-vignette('mdp')
-vignette('xval')
-vignette('qoq')
-vignette('simulations')
-vignette('nearestCentroid')
-```
-
-## Extending the lolR Package
-
-The lolR package makes many useful resources available (such as embedding and cross-validation) for simple extension. 
-
-To extend the lolR package, check out the vignettes:
-
-```
-require(lolR)
-vignette('extend_embedding')
-vignette('extend_classification')
-```
 
 # Results
 
