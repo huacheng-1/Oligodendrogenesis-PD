@@ -5,7 +5,7 @@ Aberrant oligodendrogenesis in the substantia nigra promotes oxidative stress-de
 - [Overview](#overview)
 - [Repo Contents](#repo-contents)
 - [System Requirements](#system-requirements)
-- - [Installation Guide](#Installation-Guide)
+- [Installation Guide](#Installation-Guide)
 - [Instructions for Use](#Instructions-for-Use)
 - [Citation Database](#Citation-Database)
 
