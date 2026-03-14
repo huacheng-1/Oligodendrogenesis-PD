@@ -14,8 +14,8 @@ This repository provides the computational framework and analytical pipelines us
 
 - [LDSC](./figure1_a&b_ldsc): `LDSC` code.
 - [EWCE](./figure1_c_EWCE): `EWCE` code.
-- [scRNA-seq](./figure2&figure3_i-l_scRNA-seq analysis): `scRNA-seq` code.
-- [Bulk RNA-seq](./figure3_a-c&e-g_Bulk RNA-seq): `Bulk RNA-seq` code.
+- [scRNA-seq](./figure2&figure3_i-l_scRNA-seq): `scRNA-seq` code.
+- [Bulk RNA-seq](./figure3_a-c&e-g_Bulk): `Bulk RNA-seq` code.
 - [AUCell](./figure3_d&h_AUCell): `AUCell` code.
 
 
