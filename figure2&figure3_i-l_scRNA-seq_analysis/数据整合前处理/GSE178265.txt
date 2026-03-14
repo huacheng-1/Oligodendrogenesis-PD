@@ -1,0 +1,109 @@
+# 单细胞分析核心包
+library(Seurat)         # 单细胞分析主框架
+library(harmony)        # 批次效应校正
+# 数据科学工具链
+library(tidyverse)      # 包含ggplot2/dplyr/tidyr/purrr/tibble等核心包
+# 增强可视化
+library(cowplot)        # 绘图组合与增强
+library(patchwork)      # 复杂图形组合
+library(pheatmap)       # 热图绘制
+library(ggthemes)       # 额外绘图主题
+# 专用分析工具
+library(SingleR)        # 细胞类型注释
+library(celldex)        # 细胞注释参考数据集
+library(clusterProfiler) # 功能富集分析
+library(org.Mm.eg.db)   # 小鼠基因注释数据库
+library(org.Hs.eg.db)   # 人类基因注释数据库
+# 数据处理扩展
+library(R.utils)        # 文件处理工具
+library(future)         # 并行计算支持
+library(glmGamPoi)      # 广义线性模型工具
+# 可选工具（根据实际需求选择）
+library(clustree)       # 聚类树可视化
+options(future.globals.maxSize = 5000 * 1024^2)  # 设置为5 GB
+plan(multisession, workers = 4)
+
+counts <- Read10X(data.dir = paste0("D:/R/GSE/GSE178265-HOMO/GSE178265"))
+scRNAlist <- CreateSeuratObject(counts = counts,
+                                       project = "GSE178265",
+                                       min.cells = 3,#单个细胞至少表达三个基因
+                                       min.features = 200)  #单个基因至少在200个细胞中表达
+
+
+
+scRNAlist[['mt_percent']] <- PercentageFeatureSet(scRNAlist,pattern = '^MT-')
+transcript_counts <- Matrix::colSums(scRNAlist@assays$RNA$counts)  
+# 设置阈值  
+low_threshold <- 500  
+high_threshold <- 6000  
+# 找出要保留的细胞的索引  
+keep_cells <- (transcript_counts >= low_threshold) & (transcript_counts <= high_threshold)  
+# 过滤掉不符合条件的细胞  
+scRNAlist <- subset(scRNAlist, cells = names(scRNAlist@assays$RNA$counts)[keep_cells])
+scRNAlist <- subset(scRNAlist, mt_percent < 2)
+plan(sequential)  # 强制单线程运行
+scRNAlist <- NormalizeData(scRNAlist)
+scRNAlist <- FindVariableFeatures(scRNAlist,nFeature_RNA = 4000) # 这里指定最后想要得到的基因数量
+scRNAlist <- ScaleData(scRNAlist,vars.to.regress = c('mt_percent')) # 这里去除线粒体的影响,当然这里如果有细胞周期的影响,我们要把细胞周期也回归一下,去除影响
+scRNAlist <- RunPCA(scRNAlist)
+#scRNAlist <- SCTransform(scRNAlist)#标准化&高变基因&归一化&PCA
+scRNAlist <- FindVariableFeatures(scRNAlist, selection.method = "vst", nfeatures = 6000)
+scRNAlist <- RunPCA(scRNAlist, dims = 1:30)
+scRNAlist <- FindNeighbors(scRNAlist, dims = 1:10)#降维聚类umap
+scRNAlist <- FindClusters(scRNAlist, resolution = 0.8) 
+scRNAlist <- RunUMAP(scRNAlist, dims = 1:5) 
+DimPlot(scRNAlist, reduction = "umap")
+
+
+markers_all <- FindAllMarkers(scRNAlist, only.pos = TRUE, min.pct = 0.25,  logfc.threshold = 0.25, verbose = T)
+top60 = markers_all %>% group_by(cluster) %>% top_n(n = 200, wt = avg_log2FC)
+g = unique(top60$gene)
+tmp = split(top60$gene,top60$cluster)
+cat(  unlist(lapply(names(tmp), function(x){
+  paste0('cluster',x,':',paste(tmp[[x]],collapse=','))
+})),sep = '\n')
+
+new.cluster.ids <- c("Oligodendrocyte","Oligodendrocyte","Astrocyte","Microglial cell","Oligodendrocyte",
+                     "Oligodendrocyte","Neuron","Oligodendrocyte precursor cell","Neuron","Oligodendrocyte",
+                     "Oligodendrocyte","Neuron","Neuron","Epithelial cell",
+                     "Oligodendrocyte","Neuron","Neuron","Oligodendrocyte precursor cell","Astrocyte",
+                     "Fibroblast","Neuron","Macrophage","Epithelial cell","Neuron","Microglial cell",
+                     "Neuron","Oligodendrocyte precursor cell","Neuron","Epithelial cell","Epithelial cell","Neuron",
+                     "Neuron","Neuron","Astrocyte")
+
+
+names(new.cluster.ids) <- levels(scRNAlist)
+scRNAlist <- RenameIdents(scRNAlist, new.cluster.ids)
+active_ident <- scRNAlist@active.ident  
+scRNAlist@meta.data$cells <- active_ident 
+group <- c("Ctrl","Ctrl","Ctrl","Ctrl","Ctrl","Ctrl","PD",
+           "Ctrl","PD","Ctrl","PD","Ctrl","Ctrl","Ctrl",
+           "Ctrl","Ctrl","Ctrl","Ctrl","Ctrl","Ctrl","Ctrl",
+           "Ctrl","LBD","LBD","PD","PD","PD","Ctrl","Ctrl",
+           "PD","Ctrl","Ctrl","PD","PD","PD","PD","PD",
+           "PD","LBD","PD","LBD","Ctrl","LBD","PD","Ctrl",
+           "PD","LBD","LBD","Ctrl","PD","Ctrl","Ctrl","PD",
+           "PD","Ctrl","Ctrl","PD","PD","PD","LBD","PD",
+           "PD","PD","LBD","PD","LBD","PD","Ctrl","Ctrl",
+           "PD","Ctrl","LBD","LBD","Ctrl","LBD","Ctrl","Ctrl",
+           "LBD","LBD","Ctrl","LBD","Ctrl","Ctrl","Ctrl","PD",
+           "Ctrl","PD","LBD","PD","LBD","PD",
+           "Ctrl","PD","Ctrl","Ctrl","PD","Ctrl")
+mapping_df <- data.frame(
+  orig.ident = levels(scRNAlist$orig.ident),  # 提取所有唯一的orig.ident
+  group = group                          # 你的分组信息向量
+)
+scRNAlist@meta.data$cell <- rownames(scRNAlist@meta.data)
+# 合并操作（保留所有细胞）
+updated_meta <- merge(
+  x = scRNAlist@meta.data,          # 原始metadata
+  y = mapping_df,                    # 映射表
+  by = "orig.ident",                 # 按orig.ident匹配
+  all.x = TRUE                       # 保留所有细胞（即使匹配不到）
+)
+rownames(updated_meta) <- updated_meta$cell
+# 更新Seurat对象的metadata
+scRNAlist@meta.data <- updated_meta
+
+active_ident <- scRNAlist@active.ident  
+scRNAlist@meta.data$cells <- active_ident 

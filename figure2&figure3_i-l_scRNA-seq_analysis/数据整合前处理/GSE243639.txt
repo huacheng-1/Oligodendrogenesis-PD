@@ -1,0 +1,84 @@
+# 单细胞分析核心包
+library(Seurat)         # 单细胞分析主框架
+library(harmony)        # 批次效应校正
+# 数据科学工具链
+library(tidyverse)      # 包含ggplot2/dplyr/tidyr/purrr/tibble等核心包
+# 增强可视化
+library(cowplot)        # 绘图组合与增强
+library(patchwork)      # 复杂图形组合
+library(pheatmap)       # 热图绘制
+library(ggthemes)       # 额外绘图主题
+# 专用分析工具
+library(SingleR)        # 细胞类型注释
+library(celldex)        # 细胞注释参考数据集
+library(clusterProfiler) # 功能富集分析
+library(org.Mm.eg.db)   # 小鼠基因注释数据库
+library(org.Hs.eg.db)   # 人类基因注释数据库
+# 数据处理扩展
+library(R.utils)        # 文件处理工具
+library(future)         # 并行计算支持
+library(glmGamPoi)      # 广义线性模型工具
+# 可选工具（根据实际需求选择）
+library(clustree)       # 聚类树可视化
+options(future.globals.maxSize = 5000 * 1024^2)  # 设置为5 GB
+data <- fread("D://R//GEO//GSE243639//Filtered_count_table.csv")
+data2 <- as.data.frame(data)  
+rownames(data2) <- data$V1[1:nrow(data2)]
+data2 <- data2[, -1]   
+data2 <- data[rowSums(data2) > 0,]
+data2 <- data[!duplicated(rownames(data)),]
+se <- CreateSeuratObject(counts = data2 )#创建seurat[33537 x 83485]
+
+dir_name <- list.files('D://R//GEO//GSE243639//GSE243639/')
+level <- levels(se@meta.data$orig.ident)
+filtered_dfs <- list()  
+for (i in 1:length(level)){
+  filtered_df <- data2 %>%  
+    select(starts_with(level[i]))  
+  filtered_dfs[[dir_name[i]]] <- filtered_df
+}
+se_list <- list()
+for (i in 1:length(dir_name)){
+  se_list[[i]] <- CreateSeuratObject(filtered_dfs[[i]],
+                                     project = dir_name[i])  
+}
+
+for (i in 1:length(dir_name)){
+  sc <- se_list[[i]] 
+  sc <- SCTransform(sc)#标准化&高变基因&归一化&PCA
+  sc <- FindVariableFeatures(sc, selection.method = "vst", nfeatures = 6000)
+  sc <- RunPCA(sc, dims = 1:50)
+  se_list[[i]] <- sc
+  # 删除sc
+  rm(sc)
+}
+
+reference_index <- which(sapply(se_list, function(x) "GSM7792123" %in% unique(x$orig.ident)))
+combined_anchors <- FindIntegrationAnchors(object.list = se_list, reference = reference_index)
+combin_integrated <- IntegrateData(anchorset =combined_anchors, dims = 1:20)
+combin_integrated <- ScaleData(combin_integrated)
+combin_integrated <- RunPCA(combin_integrated, dims = 1:50)
+combin_integrated <- FindNeighbors(combin_integrated, dims = 1:10)#降维聚类umap
+combin_integrated <- FindClusters(combin_integrated, resolution = 0.6) 
+combin_integrated <- RunUMAP(combin_integrated, dims = 1:10) 
+DimPlot(combin_integrated, reduction = "umap")
+combin_integrated <- FindClusters(combin_integrated, resolution = 0.6) 
+markers_all <- FindAllMarkers(combin_integrated, only.pos = TRUE, min.pct = 0.25,  logfc.threshold = 0.25, verbose = T)
+top60 = markers %>% group_by(cluster) %>% top_n(n = 100, wt = avg_log2FC)
+g = unique(top60$gene)
+tmp = split(top60$gene,top60$cluster)
+cat(  unlist(lapply(names(tmp), function(x){
+  paste0('cluster',x,':',paste(tmp[[x]],collapse=','))
+})),sep = '\n')
+new.cluster.ids <- c("Oligodendrocyte","Oligodendrocyte","Oligodendrocyte","Microglial cell",
+                     "Astrocyte","Oligodendrocyte","Oligodendrocyte precursor cell","Astrocyte",
+                     "Neurons","Oligodendrocyte",
+                     "Microglial cell","Astrocyte","Microglial cell",
+                     "Astrocyte","Oligodendrocyte","Neurons","Astrocyte",
+                     "Vascular cell","Neurons","Oligodendrocyte precursor cell","Astrocyte",
+                     "Microglial cell","Microglial cell","Oligodendrocyte precursor cell")
+names(new.cluster.ids) <- levels(combin_integrated)
+combin_integrated <- RenameIdents(combin_integrated, new.cluster.ids)
+
+active_ident <- combin_integrated@active.ident  
+combin_integrated@meta.data$cells <- active_ident 

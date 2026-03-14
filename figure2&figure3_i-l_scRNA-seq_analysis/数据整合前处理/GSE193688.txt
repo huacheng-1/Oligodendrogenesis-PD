@@ -1,0 +1,136 @@
+# 单细胞分析核心包
+library(Seurat)         # 单细胞分析主框架
+library(harmony)        # 批次效应校正
+# 数据科学工具链
+library(tidyverse)      # 包含ggplot2/dplyr/tidyr/purrr/tibble等核心包
+# 增强可视化
+library(cowplot)        # 绘图组合与增强
+library(patchwork)      # 复杂图形组合
+library(pheatmap)       # 热图绘制
+library(ggthemes)       # 额外绘图主题
+# 专用分析工具
+library(SingleR)        # 细胞类型注释
+library(celldex)        # 细胞注释参考数据集
+library(clusterProfiler) # 功能富集分析
+library(org.Mm.eg.db)   # 小鼠基因注释数据库
+library(org.Hs.eg.db)   # 人类基因注释数据库
+# 数据处理扩展
+library(R.utils)        # 文件处理工具
+library(future)         # 并行计算支持
+library(glmGamPoi)      # 广义线性模型工具
+# 可选工具（根据实际需求选择）
+library(clustree)       # 聚类树可视化
+
+options(future.globals.maxSize = 5000 * 1024^2)  # 设置为5 GB
+plan(multisession, workers = 4)
+
+dir="D:/R/GSE/GSE193688-HOMO/GSE193688_RAW/" 
+samples=list.files( dir )
+samples
+
+counts_gse193688 <- list()
+for (i in 1:length(samples)){
+  counts <- Read10X_h5(filename = paste("D:/R/GSE/GSE193688-HOMO/GSE193688_RAW/",samples[i],sep = ''))
+  rna_counts <- counts[["Gene Expression"]]
+  counts_gse193688[samples[i]] <- rna_counts
+}
+
+scRNAlist <- list()
+for (i in 1:length(samples)){
+  counts <- Read10X_h5(filename = paste("D:/R/GSE/GSE193688-HOMO/GSE193688_RAW/",samples[i],sep = ''))
+  rna_counts <- counts[["Gene Expression"]]
+  scRNAlist[[i]] <- CreateSeuratObject(counts = rna_counts,
+                                       project = samples[i],
+                                       min.cells = 3,#单个细胞至少表达三个基因
+                                       min.features = 200)  #单个基因至少在200个细胞中表达
+  
+  
+}
+
+for (i in 1:length(scRNAlist)){
+  sc <- scRNAlist[[i]] # 获取scRNAlist中的第i个seurat对象
+  # 计算线粒体的比例
+  sc[['mt_percent']] <- PercentageFeatureSet(sc,pattern = '^MT-')
+  transcript_counts <- Matrix::colSums(sc@assays$RNA$counts)  
+  # 设置阈值  
+  low_threshold <- 500  
+  high_threshold <- 6000  
+  # 找出要保留的细胞的索引  
+  keep_cells <- (transcript_counts >= low_threshold) & (transcript_counts <= high_threshold)  
+  # 过滤掉不符合条件的细胞  
+  sc <- subset(sc, cells = names(sc@assays$RNA$counts)[keep_cells])
+  sc <- subset(sc, mt_percent < 2)
+  sc <- NormalizeData(sc)
+  sc <- FindVariableFeatures(sc,nFeature_RNA = 4000) # 这里指定最后想要得到的基因数量
+  sc <- ScaleData(sc,vars.to.regress = c('mt_percent')) # 这里去除线粒体的影响,当然这里如果有细胞周期的影响,我们要把细胞周期也回归一下,去除影响
+  sc <- RunPCA(sc)
+  scRNAlist[[i]] <- sc
+  # 删除sc
+  rm(sc)
+}
+
+scRNA_combined <- merge(x = scRNAlist[[1]],y = scRNAlist[-1],add.cell.ids = samples)
+
+
+
+
+scRNA_combined <- NormalizeData(scRNA_combined)
+scRNA_combined <- FindVariableFeatures(scRNA_combined,nFeature_RNA = 4000) # 这里指定最后想要得到的基因数量
+scRNA_combined <- ScaleData(scRNA_combined,vars.to.regress = c('mt_percent')) # 这里去除线粒体的影响,当然这里如果有细胞周期的影响,我们要把细胞周期也回归一下,去除影响
+scRNA_combined <- RunPCA(scRNA_combined)
+scRNA_combined <- SCTransform(scRNA_combined)#标准化&高变基因&归一化&PCA
+scRNA_combined <- RunPCA(scRNA_combined, dims = 1:30)
+scRNA_combined <- FindNeighbors(scRNA_combined, dims = 1:10)#降维聚类umap
+scRNA_combined <- FindClusters(scRNA_combined, resolution = 0.8) 
+scRNA_combined <- RunUMAP(scRNA_combined, dims = 1:10) 
+DimPlot(scRNA_combined, reduction = "umap")
+
+scRNA_combined <- PrepSCTFindMarkers(scRNA_combined)
+markers_all <- FindAllMarkers(scRNA_combined, only.pos = TRUE, min.pct = 0.25,  logfc.threshold = 0.25, verbose = T)
+top60 = markers_all %>% group_by(cluster) %>% top_n(n = 400, wt = avg_log2FC)
+g = unique(top60$gene)
+tmp = split(top60$gene,top60$cluster)
+cat(  unlist(lapply(names(tmp), function(x){
+  paste0('cluster',x,':',paste(tmp[[x]],collapse=','))
+})),sep = '\n')
+
+new.cluster.ids <- c("Oligodendrocyte","Oligodendrocyte","Oligodendrocyte",
+                     "Oligodendrocyte","Oligodendrocyte","Oligodendrocyte","Oligodendrocyte precursor cell",
+                     "Oligodendrocyte","Oligodendrocyte","Astrocyte","Oligodendrocyte",
+                     "Oligodendrocyte","Oligodendrocyte","Oligodendrocyte",
+                     "Microglial cell","Microglial cell","Astrocyte","Oligodendrocyte",
+                     "Microglial cell","Oligodendrocyte","Oligodendrocyte precursor cell",
+                     "Neuron","Oligodendrocyte precursor cell","Oligodendrocyte",
+                     "Oligodendrocyte","Oligodendrocyte","Oligodendrocyte","Oligodendrocyte",
+                     "Neuron","Oligodendrocyte precursor cell",
+                     "Oligodendrocyte","Pericyte")
+
+
+names(new.cluster.ids) <- levels(scRNA_combined)
+scRNA_combined <- RenameIdents(scRNA_combined, new.cluster.ids)
+active_ident <- scRNA_combined@active.ident  
+scRNA_combined@meta.data$cells <- active_ident 
+
+group <- c("aged","aged","aged","aged","aged","aged","aged","aged","aged",
+           "pd","pd","pd","pd","pd","pd","pd","pd","pd","pd",
+           "pd","pd","pd","pd","pd","young","young","young",
+           "young","young","young","young","young","young","young"
+)
+mapping_df <- data.frame(
+  orig.ident = unique(scRNA_combined@meta.data$orig.ident),  # 提取所有唯一的orig.ident
+  group = group                          # 你的分组信息向量
+)
+scRNA_combined@meta.data$cell <- rownames(scRNA_combined@meta.data)
+# 合并操作（保留所有细胞）
+updated_meta <- merge(
+  x = scRNA_combined@meta.data,          # 原始metadata
+  y = mapping_df,                    # 映射表
+  by = "orig.ident",                 # 按orig.ident匹配
+  all.x = TRUE                       # 保留所有细胞（即使匹配不到）
+)
+rownames(updated_meta) <- updated_meta$cell
+# 更新Seurat对象的metadata
+scRNA_combined@meta.data <- updated_meta
+
+active_ident <- scRNA_combined@active.ident  
+scRNA_combined@meta.data$cells <- active_ident 
