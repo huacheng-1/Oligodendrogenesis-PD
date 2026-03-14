@@ -1,4 +1,4 @@
-# oligodendrogenesis-PD
+# Oligodendrogenesis-PD
 ## Contents
 
 - [Overview](#overview)
