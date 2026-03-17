@@ -1,0 +1,226 @@
+#!/bin/bash
+# =============================================================================
+# Script Description: Cell-type-specific enrichment analysis pipeline using
+#                     LDSC (LD Score Regression)
+# Pipeline Overview:
+#   Step 2 → Merge 1000G annotation files into a unified BED file
+#   Step 3 → Generate new .annot files for each cell type
+#   Step 4 → Calculate LD Scores per cell type
+#   Step 5 → Run Stratified LDSC enrichment analysis across GWAS datasets
+# =============================================================================
+
+
+# =============================================================================
+# Step 2: Merge 1000G EUR Phase3 baseline annotation files into a single BED file
+# Input:  baselineLD.*.annot files under 1000G_EUR_Phase3_baseline_annot/
+# Output: 1000genomes_phase3_SNPs.bed (used for downstream intersectBed operations)
+# =============================================================================
+cd /data/h01005/hc/ldsc/ldsc/1000G_EUR_Phase3_baseline_annot
+
+rm -f tmp.bed  # Remove any existing tmp.bed to prevent stale data from being appended on re-runs
+
+for file in baselineLD*
+do
+    # Skip the header line (NR>1) and convert each annotation file to BED format:
+    # Output columns: chr<chrom> | start | end (start+1) | SNP_ID
+    awk 'NR > 1 { end = $2 + 1; print "chr"$1"\t"$2"\t"end"\t"$3 }' "$file" >> tmp.bed
+done
+
+# Sort the merged BED file by chromosomal coordinates
+sortBed -i tmp.bed > 1000genomes_phase3_SNPs.bed
+rm tmp.bed
+
+
+# =============================================================================
+# Step 3: Generate new .annot files for each cell type
+# Logic:  For each cell-type BED file, first intersect it with 1000G SNPs,
+#         then append the cell-type annotation column to each per-chromosome
+#         baseline annotation file.
+# Dependency: fast_match2_2.pl (must reside in the same directory as this script)
+# Output: *.new.annot.gz files under 1000G_EUR_Phase3_baseline_annot_2/
+# =============================================================================
+path_name="/data/h01005/hc/ldsc/ldsc"
+all_snps="1000genomes_phase3_SNPs.bed"            # SNP BED file produced in Step 2
+all_annotations="1000G_EUR_Phase3_baseline_annot"  # Baseline annotation directory
+plink_file="1000G_EUR_Phase3_plink"
+hapmap_snps="hm3_no_MHC.list.txt"
+new_annotations_dir="${path_name}/${all_annotations}_2"  # Output directory for new annotation files
+
+mkdir -p "$new_annotations_dir" baseline
+
+for f in /data/h01005/hc/ldsc/Bed/*.bed
+do
+    # Sanitize the cell-type name (replace non-alphanumeric characters with underscores)
+    # so it is safe to use as both a filename component and a column header
+    tissue=$(basename "$f" .bed | sed 's/[^a-zA-Z0-9_]/_/g')
+
+    # Count overlaps between each 1000G SNP and the cell-type BED intervals
+    # (-c appends a coverage count as the last column)
+    intersectBed -c \
+        -a "${path_name}/${all_snps}" \
+        -b "$f" \
+        > "${f}.1000genomes.intersect"
+
+    # Extract IDs of SNPs that overlap the cell-type regions (count column != 0)
+    awk '{ if ($5 != 0) print $4 }' "${f}.1000genomes.intersect" \
+        > "${f}.1000genomes.intersect.snp"
+
+    # Iterate over each per-chromosome baseline annotation file and append
+    # a new annotation column for the current cell type
+    for j in "$path_name/$all_annotations"/*.annot
+    do
+        file_name=$(basename "$j")
+        output_prefix="${file_name%.annot}"
+        output_file="${new_annotations_dir}/${output_prefix}_${tissue}.new.annot"
+
+        # Perl script: match the SNP list and insert a new cell-type column
+        # into the baseline annotation file
+        perl "${path_name}/fast_match2_2.pl" \
+            "${f}.1000genomes.intersect.snp" \
+            "${tissue}" \
+            "${j}" \
+            > "$output_file"
+    done
+
+    # Compress all annotation files for this cell type immediately after generation
+    # to conserve disk space before moving on to the next cell type
+    gzip "${new_annotations_dir}"/*_${tissue}.new.annot
+
+done
+
+# Sync the newly created annotation files to BASE_DIR so that Step 4 can locate them.
+# FIX: Step 3 writes to $path_name/..., but Step 4 reads from $BASE_DIR/...
+#      Without this copy the files would not be found in Step 4.
+mkdir -p "/data/h01005/hc/0.1ldsc-gwas/1000G_EUR_Phase3_baseline_annot_2"
+cp "${new_annotations_dir}"/*.new.annot.gz \
+   "/data/h01005/hc/0.1ldsc-gwas/1000G_EUR_Phase3_baseline_annot_2/"
+
+
+# =============================================================================
+# Step 4: Calculate LD Scores for the specified cell type (per chromosome)
+# Parameter:
+#   TISSUE_NAME — cell-type label; replace with one of:
+#                 Astrocyte | Fibroblast | Microglial_cell |
+#                 Oligodendrocyte | Oligodendrocyte_precursor_cell | Neuron
+# Output: .l2.ldscore.gz / .l2.M / .l2.M_5_50 / .log files under
+#         ${BASE_DIR}/${TISSUE_NAME}/
+# =============================================================================
+TISSUE_NAME="Astrocyte"   # <-- Change this value to switch cell types
+BASE_DIR="/data/h01005/hc/0.1ldsc-gwas"
+LDSC_PATH="/data/h01005/hc/ldsc/ldsc"
+ANNOT_DIR="${BASE_DIR}/1000G_EUR_Phase3_baseline_annot_2"  # Path synced from Step 3
+
+mkdir -p "${BASE_DIR}/${TISSUE_NAME}"
+
+for i in {1..22}; do
+    echo "[INFO] Computing LD Scores for chromosome ${i} ..."
+
+    python "${LDSC_PATH}/ldsc.py" \
+        --l2 \
+        --bfile "${LDSC_PATH}/1000G_EUR_Phase3_plink/1000G.EUR.QC.${i}" \
+        --ld-wind-cm 1 \
+        --print-snps "${LDSC_PATH}/hm3_no_MHC.list.txt" \
+        --annot "${ANNOT_DIR}/baselineLD.${i}_${TISSUE_NAME}.new.annot.gz" \
+        --out "${BASE_DIR}/${TISSUE_NAME}/baselineLD.${TISSUE_NAME}.${i}"
+done
+
+# Move annotation files from the shared directory into the cell-type-specific
+# output directory for clean archival
+for i in {1..22}; do
+    mv "${ANNOT_DIR}/baselineLD.${i}_${TISSUE_NAME}.new.annot.gz" \
+       "${BASE_DIR}/${TISSUE_NAME}/"
+done
+
+
+# =============================================================================
+# Step 5: Run Stratified LDSC enrichment analysis across multiple GWAS datasets
+# Parameters:
+#   TISSUE_NAME   — same as Step 4; replace with the target cell-type name
+#   TISSUE_PARAMS — array of GWAS summary statistics files to be processed
+# Output: one .results file per GWAS × cell-type combination,
+#         written to ${OUTPUT_DIR}/
+# =============================================================================
+BASE_DIR="/data/h01005/hc/0.1ldsc-gwas"
+GWAS_DIR="/data/h01005/hc/GSE147672/ldsc"
+# Input GWAS directory (modify as needed)
+INPUT_DIR="${GWAS_DIR}/GWAS-DATA/Blauwendraat_Parkinsons_sexdiff_2021_Sumstats/after processing"
+# Output directory (created automatically)
+OUTPUT_DIR="${BASE_DIR}/z-result/Blauwendraat_Parkinsons_sexdiff_2021_Sumstats"
+mkdir -p "$OUTPUT_DIR"
+
+LDSC_DIR="/data/h01005/hc/ldsc/ldsc"
+TISSUE_NAME="Astrocyte"  # <-- Change this value to switch cell types
+
+# GWAS summary statistics files to process
+# Grouped by sex (FEMALE / MALE) and cohort filtering strategy
+# (full cohort / proxy SNPs excluded / UKB samples excluded entirely)
+declare -a TISSUE_PARAMS=(
+    "FEMALE_PD_filtered_sumstats_no_multi_allelics_RSID.txt"
+    "FEMALE_PD_filtered_sumstats_NO_PROXY_no_multi_allelics_RSID.txt"
+    "FEMALE_PD_filtered_sumstats_NO_UKB_AT_ALL_no_multi_allelics_RSID.txt"
+    "MALE_PD_filtered_sumstats_no_multi_allelics_RSID.txt"
+    "MALE_PD_filtered_sumstats_NO_PROXY_MAF_no_multi_allelics_RSID.txt"
+    "MALE_PD_filtered_sumstats_NO_UKB_AT_ALL_no_multi_allelics_RSID.txt"
+)
+
+# Shared reference file path prefixes
+# (ldsc appends the chromosome number automatically when using --*-chr flags)
+REF_LD_BASE="${LDSC_DIR}/1000G_Phase3_baselineLD_v2.2_ldscores/baselineLD"
+WEIGHTS_BASE="${LDSC_DIR}/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC"
+FRQ_BASE="${LDSC_DIR}/1000G_Phase3_frq/1000G.EUR.QC"
+
+# --- Helper functions ---
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+
+validate_path() {
+    if [ ! -e "$1" ]; then
+        log "ERROR: Path does not exist — $1"
+        exit 1
+    fi
+}
+
+# --- Main ---
+log "Starting batch LDSC enrichment analysis for cell type: ${TISSUE_NAME}"
+validate_path "${INPUT_DIR}"
+
+for tissue in "${TISSUE_PARAMS[@]}"; do
+    sumstat_file="${INPUT_DIR}/${tissue}"
+    validate_path "${sumstat_file}"
+
+    (
+        log "Processing GWAS file: ${tissue}"
+
+        # Build a comma-separated list of cell-type annotation files (all 22 chromosomes).
+        # FIX: Using an array instead of echo+glob avoids the risk of the glob returning
+        #      a literal string when no files match.
+        annot_files=("${BASE_DIR}/${TISSUE_NAME}"/baselineLD.*_${TISSUE_NAME}.new.annot.gz)
+        ANNOT_PARAM=$(IFS=','; echo "${annot_files[*]}")
+
+        ref_files=("${REF_LD_BASE}".*.annot.gz)
+        ANNOT_REF=$(IFS=','; echo "${ref_files[*]}")
+
+        # LD Score file path prefix for this cell type
+        # (ldsc appends <chrom>.l2.ldscore.gz automatically)
+        REF_LD_PARAM="${BASE_DIR}/${TISSUE_NAME}/baselineLD.${TISSUE_NAME}."
+
+        # Run Stratified LDSC to estimate heritability enrichment
+        # for the cell-type-specific annotation
+        python "${LDSC_DIR}/ldsc.py" \
+            --h2 "${sumstat_file}" \
+            --ref-ld-chr "${REF_LD_PARAM},${REF_LD_BASE}." \
+            --w-ld-chr "${WEIGHTS_BASE}." \
+            --frqfile-chr "${FRQ_BASE}." \
+            --annot "${ANNOT_PARAM},${ANNOT_REF}" \
+            --print-coefficients \
+            --overlap-annot \
+            --out "${OUTPUT_DIR}/${tissue}_${TISSUE_NAME}_out_2"
+
+        log "Completed: ${tissue}"
+    ) || echo "[ERROR] Task failed: ${tissue}" >> "${OUTPUT_DIR}/error.log" &
+    # Each GWAS file is processed in the background for parallelism;
+    # failures are logged to error.log rather than silently ignored.
+
+done
+
+wait  # Block until all background jobs finish
+log "All tasks completed. Check ${OUTPUT_DIR}/error.log for any failures."
