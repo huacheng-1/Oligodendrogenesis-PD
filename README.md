@@ -16,43 +16,80 @@ This repository contains the R analysis scripts associated with the manuscript: 
 # Repository Structure
 
 ├─[LDSC](./figure1a&b_ldsc): `figure1 a&b` code.
+
 │  │  fast_match2_2.pl
+
 │  │  step2_ldsc.txt
+
 │  │  step3_plot.R
+
 │  │
+
 │  └─step1_bed_generation
+
 │          integrated_scRNA_to_bed.R
+
 │          scATAC_to_bed.R
+
 │
+
 ├─[EWCE](./figure1c_EWCE):: `figure1 c` code.
+
 │      figure1c(EWCE) .R
+
 │
+
 ├─[scRNA-seq](./figure2scRNA-seq_analysis):`figure2` code.
+
 │  │  figure2d-f.R
+
 │  │  figure2g-i.R
+
 │  │
+
 │  └─figure2a-c
+
 │          figure2a.R
+
 │          figure2b,c.R
+
 │          GSE178265_pre-process.R
+
 │          GSE193688_pre-process.R
+
 │          GSE243639_pre-process.R
+
 │
+
 ├─[Bulk RNA-seq](./figure3a-c&e-g_Bulk_RNA-seq):`figure3 a-c&e-g` code.
+
 │  │  figure3a_e_volcano.R
+
 │  │  figure3b_f_GO.R
+
 │  │  figure3c_g_heatmap.R
+
 │  │
+
 │  └─microarray_data_pre-process
+
 │          GSE49036.R
+
 │          GSE7621.R
+
 │
+
 ├─[AUCell](./figure3d&h_AUCell):`figure3 d&h` code.
+
 │      figure3d&h_AUCell.R
+
 │
+
 └─[OL subclusters](figure3i-l-OL-subclusters):`figure3 i-l` code.
-        figure3i-j_OL subclusters.R
-        figure3k-l_GO.R
+
+│       figure3i-j_OL subclusters.R
+
+│       figure3k-l_GO.R
 
 # System Requirements
 ## Hardware requirements
