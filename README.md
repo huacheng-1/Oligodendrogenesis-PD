@@ -85,7 +85,7 @@ This repository contains the R analysis scripts associated with the manuscript: 
 
 │
 
-└─[OL subclusters](figure3i-l-OL-subclusters):`figure3 i-l` code.
+└─[OL subclusters](figure3i-l_OL-subclusters):`figure3 i-l` code.
 
 │       figure3i-j_OL subclusters.R
 
