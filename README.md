@@ -94,7 +94,7 @@ This repository contains the R analysis scripts associated with the manuscript: 
 # System Requirements
 ## Hardware requirements
 
-Oligodendrogenesis-PD requires only a standard computer with enough RAM to support the in-memory operations.
+Oligodendrogenesis-PD requires only a bioinformatics workstation with sufficient RAM to support high-throughput in-memory genomic computations.
 
 CPU: 13th Gen Intel(R) Core(TM) i7-13700 (2.10 GHz)
 
