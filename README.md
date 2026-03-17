@@ -1,4 +1,4 @@
-# Oligodendrogenesis-PD
+# Aberrant oligodendrogenesis in PD
 ## Contents
 
 - [Overview](#overview)
@@ -56,7 +56,7 @@ This repository contains the R analysis scripts associated with the manuscript: 
 # System Requirements
 ## Hardware requirements
 
-Oligodendrogenesis-PD was developed and tested on a workstation with the following specifications:
+Aberrant oligodendrogenesis in PD was developed and tested on a workstation with the following specifications:
 
 CPU: 13th Gen Intel® Core™ i7-13700 (2.10 GHz)
 
