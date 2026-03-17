@@ -46,19 +46,23 @@ This repository contains the R analysis scripts associated with the manuscript: 
 ├── figure3d&h_AUCell/
 │   └── figure3d&h_AUCell.R                           #Score oxidative stress gene set activity per cell with AUCell 
 │
-└── figure3i-l OL subclusters/
-    ├── figure3i-j_OL subclusters.R                   # Sub-cluster oligodendrocytes, compare PD/CON subcluster proportions
-    └── figure3k-l_GO.R                               # GO-BP enrichment on subcluster 3 and 6 
+├── figure3i-l OL subclusters/
+│   ├── figure3i-j_OL subclusters.R                   # Sub-cluster oligodendrocytes, compare PD/CON subcluster proportions
+│   └── figure3k-l_GO.R                               # GO-BP enrichment on subcluster 3 and 6 
+│
+└── README.md       
 ```
 
 # System Requirements
 ## Hardware requirements
 
-Oligodendrogenesis-PD requires only a bioinformatics workstation with sufficient RAM to support high-throughput in-memory genomic computations.
+Oligodendrogenesis-PD was developed and tested on a workstation with the following specifications:
 
-CPU: 13th Gen Intel(R) Core(TM) i7-13700 (2.10 GHz)
+CPU: 13th Gen Intel® Core™ i7-13700 (2.10 GHz)
 
 RAM: 64.0 GB
+
+A minimum of 32 GB RAM is recommended. Larger datasets or multi-sample integrations may require up to 64 GB or more.
 
 
 ## OS Requirements
@@ -102,13 +106,16 @@ LDSC version 1.0.1 (https://github.com/bulik/ldsc/wiki/Summary-Statistics-File-F
 
 # Installation Guide
 R version 4.4.1 installation guide:
+
 1.InstallR from https://cran.r-project.org/
+
 2.(0ptional)Install RStudio from https://posit.co/download/rstudio-desktop/
+
 3.Install all required packages by running:
+
 ```
 # Install dependencies
 # Install R from https://cran.r-project.org/
-# Typical installation time: Approximately 10-20 minutes on a standard desktopcomputer with a stable internet connect(longer if Seurat dependencies # areLnot pre-installed).
 #**From CRAN:**
 install.packages(c(
 "tidyverse", # version >= 1.3.0
@@ -130,9 +137,8 @@ install.packages(c(
 ))
 #**From Bioconductor (single-cell analysis):**
 if (Irequire("BiocManager", quietly = TRUE))install.packages("BiocManager")
-
 ```
-
+Typical installation time: Approximately 5-10 minutes on a standard desktopcomputer with a stable internet connect(longer if Seurat dependencies areLnot pre-installed).
 
 # Data
 Four PD GWAS summary statistics datasets derived primarily from individuals of European ancestry were compiled. These included: Leal et al., 2025 (doi: 10.1101/2025.07.18.25331793) ; GP2 Parkinson’s Disease GWAS, European ancestry, 2025; Kim et al., 2024 (doi: 10.1038/s41588-023-01584-8);  and Nalls et al., 2019 (doi: 10.1016/S1474-4422(19)30320-5).
