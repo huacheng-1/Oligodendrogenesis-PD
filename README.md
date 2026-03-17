@@ -48,7 +48,7 @@ This repository contains the R analysis scripts associated with the manuscript: 
 │
 ├── figure3i-l OL subclusters/
 │   ├── figure3i-j_OL subclusters.R                   # Sub-cluster oligodendrocytes, compare PD/CON subcluster proportions
-│   └── figure3k-l_GO.R                               # GO-BP enrichment on subcluster 3 and 6 
+│   └── figure3k-l_GO.R                               # GO-BP enrichment on subclusters 3 and 6 
 │
 └── README.md       
 ```
@@ -107,11 +107,11 @@ LDSC version 1.0.1 (https://github.com/bulik/ldsc/wiki/Summary-Statistics-File-F
 # Installation Guide
 R version 4.4.1 installation guide:
 
-1.Install R from https://cran.r-project.org/
+1. Install R from https://cran.r-project.org/
 
-2.(Optional) Install RStudio from https://posit.co/download/rstudio-desktop/
+2. (Optional) Install RStudio from https://posit.co/download/rstudio-desktop/
 
-3.Install all required packages by running:
+3. Install all required packages by running:
 
 ```
 # Install dependencies
