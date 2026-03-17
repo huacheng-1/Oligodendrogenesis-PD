@@ -17,73 +17,51 @@ This repository contains the R analysis scripts associated with the manuscript: 
 
 ├─[LDSC](./figure1a&b_ldsc): `figure1 a&b` code.
 
-│  └─step1_bed_generation
-
-│          integrated_scRNA_to_bed.R  # Convert scRNA-seq cell-type markers to BED files for LDSC
-
-│          scATAC_to_bed.R            # Extract scATAC-seq peaks per cell type & export as BED files for LDSC
-
-│  fast_match2_2.pl                   # Match SNPs against cell-type annotation files for LDSC input
-
-│  step2_ldsc.txt                     # Bash pipeline: merge baseline annotations, generate .annot files, compute LD scores & run stratified LDSC
-
-│  step3_plot.R                       # Compute p-values from LDSC z-scores & visualize cell-type enrichment
-
-│ 
-
 ├─[EWCE](./figure1c_EWCE):: `figure1 c` code.
-
-│  figure1c(EWCE) .R                  # EWCE cell-type enrichment test for PD DEGs
-
-│
 
 ├─[scRNA-seq](./figure2scRNA-seq_analysis):`figure2` code.
 
-│  └─figure2a-c
-
-│          figure2a.R                 # Integrates GSE243639/178265/193688 with Harmony and unified cell-type annotation
-
-│          figure2b,c.R               # UMAP, proportion bar chart, marker dot plot & expression heatmap from integrated object
-
-│          GSE178265_pre-process.R    # QC, normalization, clustering & annotation for GSE178265 (human PD)
-
-│          GSE193688_pre-process.R    # QC, normalization, clustering & annotation for GSE193688 (human PD)
-
-│          GSE243639_pre-process.R    # QC, normalization, clustering & annotation for GSE243639 (human PD)
-
-│  figure2d-f.R                       # QC, SCT integration, clustering & annotation for CNP0000892 α-synuclein PD mouse snRNA-seq
-
-│  figure2g-i.R                       # QC, SCT integration, clustering & annotation for MPTP mouse snRNA-seq
-
-│
-
 ├─[Bulk RNA-seq](./figure3a-c&e-g_Bulk_RNA-seq):`figure3 a-c&e-g` code.
-
-│  └─microarray_data_pre-process
-
-│          GSE49036.R                 # Download GSE49036 & run limma DEG (PD vs CON)
-
-│          GSE7621.R                  # Download GSE7621 & run limma DEG (PD vs CON)
-
-│  figure3a_e_volcano.R               # Download GSE49036 & run limma DEG (PD vs CON)
-
-│  figure3b_f_GO.R                    # Download GSE49036 & run limma DEG (PD vs CON)
-
-│  figure3c_g_heatmap.R               # Heatmap of target gene expression
-
-│
 
 ├─[AUCell](./figure3d&h_AUCell):`figure3 d&h` code.
 
-│  figure3d&h_AUCell.R                # Heatmap of target gene expression
-
-│
-
 └─[OL subclusters](figure3i-l_OL-subclusters):`figure3 i-l` code.
 
-│  figure3i-j_OL subclusters.R        # Sub-cluster oligodendrocytes, compare PD/CON subcluster proportions
-
-│  figure3k-l_GO.R                    # GO-BP enrichment on subcluster 3 and 6 
+```
+├── figure1a&b_ldsc/
+│   ├── fast_match2_2.pl                              # Match SNPs against cell-type annotation files for LDSC input
+│   ├── step1_bed_generation/
+│   │   ├── integrated_scRNA_to_bed.R                 # Convert scRNA-seq cell-type markers to BED files for LDSC
+│   │   └── scATAC_to_bed.R                           # Extract scATAC-seq peaks per cell type & export as BED files for LDSC
+│   ├── step2_ldsc.txt                                # Bash pipeline: merge baseline annotations, generate .annot files, compute LD scores & run stratified LDSC
+│   └── step3_plot.R                                  # Compute p-values from LDSC z-scores & visualize cell-type enrichment
+├── figure1c_EWCE/
+│   └── figure1c(EWCE).R                              # EWCE cell-type enrichment test for PD DEGs
+├── figure2scRNA-seq_analysis/
+│   ├── figure2a-c/
+│   │   ├── GSE243639_pre-process.R                   # QC, normalization, clustering & annotation for GSE243639 (human PD)
+│   │   ├── GSE178265_pre-process.R                   # QC, normalization, clustering & annotation for GSE178265 (human PD)
+│   │   ├── GSE193688_pre-process.R                   # QC, normalization, clustering & annotation for GSE193688 (human PD)
+│   │   ├── figure2a.R                                # Integrates GSE243639/178265/193688 with Harmony and unified cell-type annotation
+│   │   └── figure2b,c.R                              # UMAP, proportion bar chart, marker dot plot & expression heatmap from integrated object
+│   ├── figure2d-f.R                                  # snRNA-seq full pipeline (QC → integration → clustering → annotation → visualization) for CNP0000892 α-synuclein PD mouse snRNA-seq
+│   └── figure2g-i.R                                  # snRNA-seq full pipeline (QC → integration → clustering → annotation → visualization) for MPTP mouse snRNA-seq
+│
+├── figure3a-c&e-g_Bulk_RNA-seq/
+│   ├── microarray_data_pre-process/
+│   │   ├── GSE7621.R                                 # Download GSE7621 & run limma DEG (PD vs CON)
+│   │   └── GSE49036.R                                # Download GSE49036 & run limma DEG (PD vs CON)
+│   ├── figure3a_e_volcano.R                          # Volcano plot of limma DEGs
+│   ├── figure3b_f_GO.R                               # GO-BP enrichment on DEGs
+│   └── figure3c_g_heatmap.R                          # Heatmap of target gene expression
+│
+├── figure3d&h_AUCell/
+│   └── figure3d&h_AUCell.R                           #Score oxidative stress gene set activity per cell with AUCell 
+│
+└── figure3i-l OL subclusters/
+    ├── figure3i-j_OL subclusters.R                   # Sub-cluster oligodendrocytes, compare PD/CON subcluster proportions
+    └── figure3k-l_GO.R                               # GO-BP enrichment on subcluster 3 and 6 
+```
 
 # System Requirements
 ## Hardware requirements
